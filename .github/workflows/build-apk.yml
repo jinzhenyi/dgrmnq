@@ -58,6 +58,7 @@ jobs:
     - name: Sign APK
       working-directory: android-template
       run: |
+        rm -rf keystore
         mkdir -p keystore
         keytool -genkey -v -keystore keystore/release-key.jks \
           -alias release \
