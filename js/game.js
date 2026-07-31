@@ -40,7 +40,7 @@ class Game2048 {
     move(direction) {
         if (this.over) return false;
         
-        const oldGrid = JSON.stringify(this.grid);
+        const oldGrid = JSON.parse(JSON.stringify(this.grid));
         let merged = Array(this.size).fill(null).map(() => Array(this.size).fill(false));
         let moved = false;
 
@@ -109,11 +109,16 @@ class Game2048 {
 
             if (this.checkGameOver()) {
                 this.over = true;
+                this.updateView(merged);
             }
 
             return true;
         }
 
+        if (this.checkGameOver()) {
+            this.over = true;
+            this.updateView(merged);
+        }
         return false;
     }
 
