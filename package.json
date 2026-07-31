@@ -1,0 +1,20 @@
+{
+  "name": "2048-game",
+  "version": "1.0.0",
+  "description": "2048 game with joystick control",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server -p 8080 -c-1",
+    "build:android": "npx cap sync android",
+    "open:android": "npx cap open android"
+  },
+  "keywords": ["2048", "game", "mobile"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@capacitor/android": "^5.5.1",
+    "@capacitor/cli": "^5.5.1",
+    "@capacitor/core": "^5.5.1",
+    "http-server": "^14.1.1"
+  }
+}
