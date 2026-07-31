@@ -42,69 +42,28 @@ jobs:
         chmod +x gradlew
         ./gradlew assembleRelease --no-daemon
 
-    - name: Setup Signing Key
+    - name: Sign APK with JKS
       working-directory: android-template
+      env:
+        RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+        RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+        RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
       run: |
-        mkdir -p keystore
-        if [ -n "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" ]; then
-          echo "Using signing key from secrets"
-          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" > keystore/signing-key.txt
-          if grep -q -- "-----BEGIN" keystore/signing-key.txt; then
-            # PEM format: extract private key and certificate
-            cp keystore/signing-key.txt keystore/signing.pem
-            openssl pkcs8 -topk8 -nocrypt \
-              -in keystore/signing.pem \
-              -out keystore/private_key.pem 2>/dev/null || \
-              openssl pkey -in keystore/signing.pem -out keystore/private_key.pem
-            openssl x509 -in keystore/signing.pem -out keystore/cert.pem
-          else
-            # JKS format: decode base64
-            base64 -d keystore/signing-key.txt > keystore/release-key.jks
-          fi
-        else
-          echo "Generating temporary keystore (for testing only)"
-          keytool -genkeypair -v -keystore keystore/release-key.jks \
-            -alias release \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass android \
-            -keypass android \
-            -dname "CN=2048 Game, OU=Game, O=2048, L=City, S=State, C=US"
-        fi
-
-    - name: Sign APK
-      working-directory: android-template
-      run: |
+        STORE_PASS="${RELEASE_STORE_PASSWORD:-android}"
+        KEY_ALIAS="${RELEASE_KEY_ALIAS:-release}"
+        KEY_PASS="${RELEASE_KEY_PASSWORD:-android}"
+        
         $ANDROID_HOME/build-tools/34.0.0/zipalign -v 4 \
           app/build/outputs/apk/release/app-release-unsigned.apk \
           app-release-aligned.apk
-
-        if [ -f keystore/private_key.pem ]; then
-          # Sign with PEM private key and certificate
-          $ANDROID_HOME/build-tools/34.0.0/apksigner sign \
-            --key keystore/private_key.pem \
-            --cert keystore/cert.pem \
-            --out app-release-signed.apk \
-            app-release-aligned.apk
-        else
-          # Sign with JKS keystore
-          STORE_PASS="${{ secrets.RELEASE_STORE_PASSWORD }}"
-          KEY_ALIAS="${{ secrets.RELEASE_KEY_ALIAS }}"
-          KEY_PASS="${{ secrets.RELEASE_KEY_PASSWORD }}"
-          
-          : ${STORE_PASS:=android}
-          : ${KEY_ALIAS:=release}
-          : ${KEY_PASS:=android}
-          
-          $ANDROID_HOME/build-tools/34.0.0/apksigner sign \
-            --ks keystore/release-key.jks \
-            --ks-key-alias "$KEY_ALIAS" \
-            --ks-pass "pass:$STORE_PASS" \
-            --key-pass "pass:$KEY_PASS" \
-            --out app-release-signed.apk \
-            app-release-aligned.apk
-        fi
+        
+        $ANDROID_HOME/build-tools/34.0.0/apksigner sign \
+          --ks keystore/release-key.jks \
+          --ks-key-alias "$KEY_ALIAS" \
+          --ks-pass "pass:$STORE_PASS" \
+          --key-pass "pass:$KEY_PASS" \
+          --out app-release-signed.apk \
+          app-release-aligned.apk
         
         mv app-release-signed.apk app/build/outputs/apk/release/app-release.apk
 
