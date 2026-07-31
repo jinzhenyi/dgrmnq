@@ -49,9 +49,9 @@ jobs:
         RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
         RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
       run: |
-        STORE_PASS="${RELEASE_STORE_PASSWORD:-android}"
+        STORE_PASS="${RELEASE_STORE_PASSWORD:-2048game!@#}"
         KEY_ALIAS="${RELEASE_KEY_ALIAS:-release}"
-        KEY_PASS="${RELEASE_KEY_PASSWORD:-android}"
+        KEY_PASS="${RELEASE_KEY_PASSWORD:-2048game!@#}"
         
         $ANDROID_HOME/build-tools/34.0.0/zipalign -v 4 \
           app/build/outputs/apk/release/app-release-unsigned.apk \
