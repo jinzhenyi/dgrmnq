@@ -55,19 +55,36 @@ jobs:
         chmod +x gradlew
         ./gradlew assembleRelease --no-daemon
 
+    - name: Setup Signing Key
+      working-directory: android-template
+      run: |
+        mkdir -p keystore
+        if [ -n "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" ]; then
+          echo "Using custom keystore from secrets"
+          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > keystore/release-key.jks
+        else
+          echo "Generating temporary keystore (for testing only)"
+          keytool -genkey -v -keystore keystore/release-key.jks \
+            -alias release \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass android \
+            -keypass android \
+            -dname "CN=2048 Game, OU=Game, O=2048, L=City, S=State, C=US"
+        fi
+        
     - name: Sign APK
       working-directory: android-template
       run: |
-        rm -rf keystore
-        mkdir -p keystore
-        keytool -genkey -v -keystore keystore/release-key.jks \
-          -alias release \
-          -keyalg RSA \
-          -keysize 2048 \
-          -validity 10000 \
-          -storepass android \
-          -keypass android \
-          -dname "CN=2048 Game, OU=Game, O=2048, L=City, S=State, C=US"
+        STORE_PASS="${{ secrets.RELEASE_STORE_PASSWORD }}"
+        KEY_ALIAS="${{ secrets.RELEASE_KEY_ALIAS }}"
+        KEY_PASS="${{ secrets.RELEASE_KEY_PASSWORD }}"
+        
+        # Use defaults if secrets not set (for auto-generated keystore)
+        : ${STORE_PASS:=android}
+        : ${KEY_ALIAS:=release}
+        : ${KEY_PASS:=android}
         
         $ANDROID_HOME/build-tools/34.0.0/zipalign -v 4 \
           app/build/outputs/apk/release/app-release-unsigned.apk \
@@ -75,9 +92,9 @@ jobs:
         
         $ANDROID_HOME/build-tools/34.0.0/apksigner sign \
           --ks keystore/release-key.jks \
-          --ks-key-alias release \
-          --ks-pass pass:android \
-          --key-pass pass:android \
+          --ks-key-alias "$KEY_ALIAS" \
+          --ks-pass "pass:$STORE_PASS" \
+          --key-pass "pass:$KEY_PASS" \
           app-release-aligned.apk
         
         mv app-release-aligned.apk app/build/outputs/apk/release/app-release.apk
