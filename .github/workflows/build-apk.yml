@@ -49,15 +49,37 @@ jobs:
           -keypass android \
           -dname "CN=2048 Game, OU=Game, O=2048, L=City, S=State, C=US"
 
-    - name: Build Signed APK
+    - name: Build Unsigned APK
       working-directory: android-template
       run: |
         chmod +x gradlew
-        ./gradlew assembleRelease --no-daemon \
-          -PRELEASE_STORE_FILE=keystore/release-key.jks \
-          -PRELEASE_STORE_PASSWORD=android \
-          -PRELEASE_KEY_ALIAS=release \
-          -PRELEASE_KEY_PASSWORD=android
+        ./gradlew assembleRelease --no-daemon
+
+    - name: Sign APK
+      working-directory: android-template
+      run: |
+        mkdir -p keystore
+        keytool -genkey -v -keystore keystore/release-key.jks \
+          -alias release \
+          -keyalg RSA \
+          -keysize 2048 \
+          -validity 10000 \
+          -storepass android \
+          -keypass android \
+          -dname "CN=2048 Game, OU=Game, O=2048, L=City, S=State, C=US"
+        
+        $ANDROID_HOME/build-tools/34.0.0/zipalign -v 4 \
+          app/build/outputs/apk/release/app-release-unsigned.apk \
+          app-release-aligned.apk
+        
+        $ANDROID_HOME/build-tools/34.0.0/apksigner sign \
+          --ks keystore/release-key.jks \
+          --ks-key-alias release \
+          --ks-pass pass:android \
+          --key-pass pass:android \
+          app-release-aligned.apk
+        
+        mv app-release-aligned.apk app/build/outputs/apk/release/app-release.apk
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
